@@ -1,39 +1,54 @@
-#include <TROOT.h>
-// Contains TApplication
-#include <TRint.h>
-
-#include "viewer.h"
-#include "EclData.h"
+#include <TApplication.h>
 #include "EclFrame.h"
 
-#include "painters/EclPainterPolar.h"
+#include <TFile.h>
 
-//#include "CERNfunctions.h"
-#include <iostream>
+using namespace Belle2;
 
-int main(int argc, char **argv) {
-  TApplication app("tapp", &argc, argv);
-  // Hide statistics box. This might also require to add gROOT->ForceStyle(); after this line.
-  gStyle->SetOptStat(0);
+int main(int argc, char** argv)
+{
+  /**************************************************************/
+  /*              OPEN TEMP FILE FOR LARGE TTREEs               */
+  /**************************************************************/
+  // This module generates large Root trees that sometimes can't be
+  // completely kept in memory. Thus, we create a temp file to store it.
+  TString temp_fname = "ecldisplay_tmp";
 
-  // TODO: Add message for the available options.
+  if (gSystem->TempFileName(temp_fname) == 0) {
+    std::cout << "Could not create temp file." << std::endl;
+    return -1;
+  }
+  std::cout << temp_fname << std::endl;
+  TFile* temp_tfile = new TFile(temp_fname, "RECREATE");
 
-  EclData* ecl_data = new EclData();
+  /**************************************************************/
 
-  ecl_data->AddFile("histofile.root");
-  std::cout << ecl_data->GetTimeMax() << std::endl;
+  ECLChannelMapper m_mapper;
+  m_mapper.initFromFile("data/ecl_channels_map.txt");
 
-  if (argc > 1)
-    setMode(0);
+  TApplication* m_app;
+  EclData* m_data;
+  EclFrame* m_frame;
 
-  EclFrame* frame = new EclFrame(0, ecl_data);
-  // Make application terminate when this window is closed.
-  frame->Connect("CloseWindow()", "TApplication", &app, "Terminate()");
+  int m_displayMode = 7;
+  int m_autoDisplay = 1;
+  
+  m_app   = new TApplication("ECLDisplay App", 0, 0);
+  m_data  = new EclData();
+  m_frame = new EclFrame(m_displayMode, m_data, m_autoDisplay, &m_mapper);
 
-  app.Run();
+  m_frame->Connect("CloseWindow()", "TSystem", gSystem, "ExitLoop()");
 
-  delete frame;
-  delete ecl_data;
+  if (argc > 1) {
+    m_data->loadRootFile(argv[1]);
+    m_frame->loadNewData();
+  }
+
+  m_app->Run();
+
+  temp_tfile->Close();
+  gSystem->Unlink(temp_fname);
 
   return 0;
 }
+

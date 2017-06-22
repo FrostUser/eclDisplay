@@ -1,37 +1,73 @@
+/**************************************************************************
+ * BASF2 (Belle Analysis Framework 2)                                     *
+ * Copyright(C) 2015 - Belle II Collaboration                             *
+ *                                                                        *
+ * Author: The Belle II Collaboration                                     *
+ * Contributors: Milkail Remnev, Dmitry Matvienko                         *
+ *                                                                        *
+ * This software is provided "as is" without any warranty.                *
+ ***************************************************************************/
+
 #ifndef ECLPAINTERFACTORY_H
 #define ECLPAINTERFACTORY_H
 
-#include "painters/EclPainter.h"
-#include "painters/EclPainter1D.h"
-#include "painters/EclPainter2D.h"
-#include "painters/EclPainter3D.h"
-#include "painters/EclPainterPolar.h"
+#include "EclPainter.h"
+#include "EclPainter1D.h"
+#include "EclPainter2D.h"
+#include "EclPainterPolar.h"
+#include "EclPainterCommon.h"
 
-// Also see const char* titles definition in EclPainterFactory.cc
-enum EclPainterType {
-  PAINTER_PHI,
-//  PAINTER_THETA,
-  PAINTER_CHANNEL,
-  PAINTER_SHAPER,
-  PAINTER_COLLECTOR,
-  PAINTER_CHANNEL_2D,
-  PAINTER_SHAPER_2D,
-  PAINTER_3D
-};
+namespace Belle2 {
+  /**
+   * Enum for type of EclPainter to create. Also see const char* titles
+   * definition in EclPainterFactory.cc
+   */
+  enum EclPainterType {
+    PAINTER_PHI, /**< Event count/energy polar angle distribution */
+    PAINTER_CHANNEL, /**< Event count/energy distribution per channel */
+    PAINTER_SHAPER, /**< Event count/energy distribution per shaperDSP */
+    PAINTER_COLLECTOR, /**< Event count/energy distribution per crate/ECLCollector */
+    PAINTER_AMP,  /**< Channel energy distribution */
+    PAINTER_AMP_SUM, /**< Event energy distribution */
+    PAINTER_TIME, /**< Time distribution */
+    PAINTER_CHANNEL_2D, /**< (theta_id:phi_id) histogram. */
+    PAINTER_SHAPER_2D /**< (shaper:crate) histogram. */
+  };
 
-class EclPainterFactory
-{
-private:
-  static const int types_count = PAINTER_3D+1;
-  static const char* titles[types_count];
+  /**
+   * Class that implements Factory pattern to create objects inherited
+   * from EclPainter.
+   */
+  class EclPainterFactory {
+  private:
+    /**  Number of painter types. */
+    static const int types_count = PAINTER_SHAPER_2D + 1;
+    /**  Titles for painter types. Also see const char* titles definition in EclPainterFactory.cc */
+    static const char* titles[types_count];
 
-  EclPainterFactory();
+    /**
+     * Constructor for EclPainterFactory
+     */
+    EclPainterFactory();
 
-public:
+  public:
 
-  static EclPainter* CreatePainter(EclPainterType type, EclData* data);
-  static const char** GetTypeTitles();
-  static const int GetTypeTitlesCount();
-};
+    /**
+     * Creates EclPainter of the specified type.
+     * It will show data from EclData specific to its type.
+     */
+    static EclPainter* createPainter(EclPainterType type, EclData* data,
+                                     ECLChannelMapper* mapper,
+                                     EclData::EclSubsystem subsys = EclData::ALL);
+    /**
+     * Returns array of titles for each EclPainter type.
+     */
+    static const char** getTypeTitles();
+    /**
+     * Size of array from getTypeTitles()
+     */
+    static int getTypeTitlesCount();
+  };
+}
 
 #endif // ECLPAINTERFACTORY_H

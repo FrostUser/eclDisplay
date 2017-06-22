@@ -1,55 +1,129 @@
+/**************************************************************************
+ * BASF2 (Belle Analysis Framework 2)                                     *
+ * Copyright(C) 2015 - Belle II Collaboration                             *
+ *                                                                        *
+ * Author: The Belle II Collaboration                                     *
+ * Contributors: Milkail Remnev, Dmitry Matvienko                         *
+ *                                                                        *
+ * This software is provided "as is" without any warranty.                *
+ ***************************************************************************/
+
 #include "EclFrame.h"
-#include <TGeoVolume.h>
-#include <TGComboBox.h>
 
-#define DEFAULT_PAINTER PAINTER_CHANNEL_2D
+// #define DEFAULT_PAINTER PAINTER_CHANNEL_2D
 
-EclFrame::EclFrame(const TGWindow* p, EclData* data, bool gl_view) {
+using namespace Belle2;
+using namespace ECLDisplayUtility;
+
+const char* EclFrame::filetypes[] = {
+  "PDF",                        "*.pdf",
+  "PostScript",                 "*.ps",
+  "Encapsulated PostScript",    "*.eps",
+  "SVG",                        "*.svg",
+  "TeX",                        "*.tex",
+  "GIF",                        "*.gif",
+  "ROOT macros",                "*.C",
+  "ROOT files",                 "*.root",
+  "XML",                        "*.xml",
+  "PNG",                        "*.png",
+  "XPM",                        "*.xpm",
+  "JPEG",                       "*.jpg",
+  "TIFF",                       "*.tiff",
+  "XCF",                        "*.xcf",
+  0,                            0
+};
+
+EclFrame::EclFrame(int painter_type, EclData* data, bool auto_display, ECLChannelMapper* mapper)
+{
+  m_open = true;
+  m_subsys = EclData::ALL;
   m_ecl_data = data;
-  m_painter_type = DEFAULT_PAINTER;
-  m_ecl_painter = EclPainterFactory::CreatePainter(
-        m_painter_type, data);
-  m_gl_view = false;
+  m_mapper = mapper;
+  m_painter_type = (EclPainterType)painter_type;
+  m_ecl_painter = EclPainterFactory::createPainter(m_painter_type, data,
+                                                   m_mapper, m_subsys);
+  m_last_event = -1;
 
-  int phi_id, theta_id;
-  for (int i = 0; i < 6912; i++) {
-    phi_id = GetPhiId(i);
-    theta_id = GetThetaId(i);
+  for (int i = 1; i <= data->getCrystalCount(); i++) {
+    int phi_id = data->getPhiId(i);//GetPhiId(i);
+    int theta_id = data->getThetaId(i);//GetThetaId(i);
 
     if (phi_id == -1 || theta_id == -1)
-      data->ExcludeChannel(i);
+      data->excludeChannel(i);
   }
 
-  InitGUI(700, 700, gl_view);
+  initGUI(1000, 700);
 
-  DoDraw();
+  m_auto_display = auto_display;
+
+  Connect("CloseWindow()", "Belle2::EclFrame", this, "setClosed()");
+
+  gStyle->SetOptStat(0);
+
+  doDraw();
 }
 
-EclFrame::~EclFrame() {
+EclFrame::~EclFrame()
+{
+  // TODO: Fix this, right now using this for testing.
   Cleanup();
 }
 
-void EclFrame::InitGUI(int w, int h, bool gl_view) {
-  SetLayoutManager(new TGHorizontalLayout(this));
+void EclFrame::initGUI(int w, int h)
+{
+  B2DEBUG(100, "EclFrame:: initializing GUI.");
 
-  m_settings = new TGVerticalFrame(this, w/6, h);
+  SetLayoutManager(new TGVerticalLayout(this));
+  TGCompositeFrame* frame_container = new TGCompositeFrame(this, w, h, kHorizontalFrame);
 
-  /* Ahem... Subframe number zero, diagram type selection */
-  TGComboBox* diagram_type = new TGComboBox(m_settings,-1);
+  /* Menu bar */
+
+  TGPopupMenu* menu_file = new TGPopupMenu(gClient->GetRoot());
+  menu_file->AddEntry("&Save As...", M_FILE_SAVE);
+  menu_file->AddSeparator();
+  menu_file->AddEntry("&Exit", M_FILE_EXIT);
+  TGPopupMenu* menu_view = new TGPopupMenu(gClient->GetRoot());
+  menu_view->AddEntry("&Show event counts in histograms", M_VIEW_EVENTS);
+  menu_view->AddEntry("&Show energy in histograms", M_VIEW_ENERGY);
+  menu_view->AddSeparator();
+  menu_view->AddEntry("&Show events from all ECL subsystems", M_VIEW_DET_FULL);
+  menu_view->AddEntry("&Show events from ECL barrel", M_VIEW_DET_BARR);
+  menu_view->AddEntry("&Show events from ECL forward endcap", M_VIEW_DET_FORW);
+  menu_view->AddEntry("&Show events from ECL backward endcap", M_VIEW_DET_BACK);
+
+  TGMenuBar* menubar = new TGMenuBar(this, w, 30);
+  menubar->AddPopup("&File", menu_file, new TGLayoutHints(kLHintsTop | kLHintsLeft));
+  menubar->AddPopup("&View", menu_view, new TGLayoutHints(kLHintsTop | kLHintsLeft));
+
+  menu_file->Connect("Activated(Int_t)", "Belle2::EclFrame",
+                     this, "handleMenu(Int_t)");
+  menu_view->Connect("Activated(Int_t)", "Belle2::EclFrame",
+                     this, "handleMenu(Int_t)");
+
+  AddFrame(menubar, new TGLayoutHints(kLHintsExpandX | kLHintsTop, 0, 0, 1, 1));
+
+  /* Settings */
+
+  m_settings = new TGVerticalFrame(frame_container, w / 6, h);
+
+  /* Zeroth subframe, diagram type selection */
+
+  TGComboBox* diagram_type = new TGComboBox(m_settings, -1);
   diagram_type->SetName("DiagramType");
-  const int types_count = EclPainterFactory::GetTypeTitlesCount();
-  const char** types_names = EclPainterFactory::GetTypeTitles();
+  const int types_count = EclPainterFactory::getTypeTitlesCount();
+  const char** types_names = EclPainterFactory::getTypeTitles();
   for (int i = 0; i < types_count; i++)
     diagram_type->AddEntry(types_names[i], i);
   diagram_type->Select(m_painter_type);
   diagram_type->SetHeight(16);
   m_settings->AddFrame(diagram_type, new TGLayoutHints(kLHintsExpandX));
-  diagram_type->Connect("Selected(Int_t)", "EclFrame", this,
-                        "ChangeType(Int_t)");
+  diagram_type->Connect("Selected(Int_t)", "Belle2::EclFrame", this,
+                        "changeType(Int_t)");
 
   /* First settings subframe, information */
 
   m_frame1 = new MultilineWidget(m_settings, "Info");
+  m_frame1->setLineCount(4);
 
   m_settings->AddFrame(m_frame1, new TGLayoutHints(kLHintsExpandX));
 
@@ -69,15 +143,15 @@ void EclFrame::InitGUI(int w, int h, bool gl_view) {
   frame2_1->AddFrame(m_events_max, new TGLayoutHints(kLHintsLeft, 2, 2, 2, 2));
   m_frame2->AddFrame(frame2_1);
 
-  m_ev_slider = new TGDoubleHSlider(m_frame2, w/6, 2);
+  m_ev_slider = new TGDoubleHSlider(m_frame2, w / 6, 2);
   m_frame2->AddFrame(m_ev_slider, new TGLayoutHints(kLHintsExpandX, 5, 5, 3, 4));
 
   TGHorizontalFrame* frame2_2 = new TGHorizontalFrame(m_frame2);
   TGTextButton* prev = new TGTextButton(frame2_2, "&Prev");
-  prev->Connect("Clicked()", "EclFrame", this, "ShowPrevEvents()");
+  prev->Connect("Clicked()", "Belle2::EclFrame", this, "showPrevEvents()");
   frame2_2->AddFrame(prev, new TGLayoutHints(kLHintsLeft, 5, 5, 3, 4));
   TGTextButton* next = new TGTextButton(frame2_2, "&Next");
-  next->Connect("Clicked()", "EclFrame", this, "ShowNextEvents()");
+  next->Connect("Clicked()", "Belle2::EclFrame", this, "showNextEvents()");
   frame2_2->AddFrame(next, new TGLayoutHints(kLHintsRight, 5, 5, 3, 4));
   m_frame2->AddFrame(frame2_2, new TGLayoutHints(kLHintsExpandX));
 
@@ -89,27 +163,27 @@ void EclFrame::InitGUI(int w, int h, bool gl_view) {
   // are going to be displayed.
   m_frame3 = new TGGroupFrame(m_settings, "Displayed channels");
   char temp[255];
-  TGCanvas* list_canvas = new TGCanvas(m_frame3, 1, 150);
+  TGCanvas* list_canvas = new TGCanvas(m_frame3, 1, 100);
   m_list_tree = new TGListTree(list_canvas, kHorizontalFrame);
   m_list_tree->Associate(m_frame3);
   TGListTreeItem* root = m_list_tree->AddItem(0, "Detector");
   m_list_tree->OpenItem(root);
-  for (int i = 0; i < 36; i++) {
+  for (int i = 0; i < 52; i++) {
     sprintf(temp, "Collector %d", i);
     TGListTreeItem* parent = m_list_tree->AddItem(root, temp);
-    parent->SetUserData((void*)(i));
+    parent->SetUserData((void*)((intptr_t)i));
     for (int j = 0; j < 12; j++) {
-      sprintf(temp, "Shaper %d", i*12 + j);
+      sprintf(temp, "Shaper %d", i * 12 + j);
       TGListTreeItem* item = m_list_tree->AddItem(parent, temp);
-      item->SetUserData((void*)(j));
+      item->SetUserData((void*)((intptr_t)j));
     }
   }
 
-  m_list_tree->Connect("Clicked(TGListTreeItem*, Int_t)", "EclFrame", this,
-                     "ChangeRange(TGListTreeItem*, Int_t)");
+  m_list_tree->Connect("Clicked(TGListTreeItem*, Int_t)", "Belle2::EclFrame", this,
+                       "changeRange(TGListTreeItem*, Int_t)");
 
   m_frame3->AddFrame(list_canvas, new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
-  m_settings->AddFrame(m_frame3, new TGLayoutHints(kLHintsExpandX, 2, 2, 2, 2));
+  m_settings->AddFrame(m_frame3, new TGLayoutHints(kLHintsExpandX | kLHintsExpandY, 2, 2, 2, 2));
 
   /* Fourth settings subframe, channel exclusion */
 
@@ -118,7 +192,7 @@ void EclFrame::InitGUI(int w, int h, bool gl_view) {
   m_channel_id = new TGNumberEntry(m_frame4, 0, 6, -1, TGNumberFormat::kNESInteger);
   m_frame4->AddFrame(m_channel_id, new TGLayoutHints(kLHintsLeft, 2, 2, 2, 2));
   TGTextButton* exclude = new TGTextButton(m_frame4, "&Exclude");
-  exclude->Connect("Clicked()", "EclFrame", this, "ExcludeChannel()");
+  exclude->Connect("Clicked()", "Belle2::EclFrame", this, "excludeChannel()");
   m_frame4->AddFrame(exclude, new TGLayoutHints(kLHintsRight, 5, 5, 3, 4));
 
   m_settings->AddFrame(m_frame4, new TGLayoutHints(kLHintsExpandX, 2, 2, 2, 2));
@@ -128,9 +202,9 @@ void EclFrame::InitGUI(int w, int h, bool gl_view) {
   m_frame5 = new TGGroupFrame(m_settings, "Energy threshold");
   TGHorizontalFrame* frame5_1 = new TGHorizontalFrame(m_frame5);
   frame5_1->SetLayoutManager(new TGHorizontalLayout(frame5_1));
-  m_min_en_threshold = new TGNumberEntry(frame5_1, 12.5, 6, -1);
+  m_min_en_threshold = new TGNumberEntry(frame5_1, 2.5, 6, -1);
   TGLabel* min_lab = new TGLabel(frame5_1, "MeV");
-  m_max_en_threshold = new TGNumberEntry(frame5_1, 125, 6, -1);
+  m_max_en_threshold = new TGNumberEntry(frame5_1, 150, 6, -1);
   TGLabel* max_lab = new TGLabel(frame5_1, "MeV");
   frame5_1->AddFrame(m_min_en_threshold, new TGLayoutHints(kLHintsLeft, 2, 2, 2, 2));
   frame5_1->AddFrame(min_lab, new TGLayoutHints(kLHintsLeft, 2, 2, 2, 2));
@@ -147,104 +221,166 @@ void EclFrame::InitGUI(int w, int h, bool gl_view) {
   /* Sixth settings subframe, "Draw" button */
 
   m_draw = new TGTextButton(m_settings, "&Draw");
-  m_draw->Connect("Clicked()", "EclFrame", this, "DoDraw()");
+  m_draw->Connect("Clicked()", "Belle2::EclFrame", this, "doDraw()");
   m_settings->AddFrame(m_draw, new TGLayoutHints(kLHintsCenterX, 5, 5, 3, 4));
+
+  m_draw_all = new TGTextButton(m_settings, "&Draw All");
+  m_draw_all->Connect("Clicked()", "Belle2::EclFrame", this, "doDrawAll()");
+  m_settings->AddFrame(m_draw_all, new TGLayoutHints(kLHintsCenterX, 5, 5, 3, 4));
 
   /* Adding the entire subframe of settings */
 
-  AddFrame(m_settings);
+  frame_container->AddFrame(m_settings);
 
   /* Canvas widget */
 
-  m_ecanvas = new TRootEmbeddedCanvas("Ecanvas", this, w, h);
+  m_ecanvas = new TRootEmbeddedCanvas("Ecanvas", frame_container, w / 2, h / 2);
   m_ecanvas->GetCanvas()->SetRightMargin(0.125);
   m_ecanvas->GetCanvas()->SetLeftMargin(0.1);
-  AddFrame(m_ecanvas, new TGLayoutHints(
-             kLHintsExpandX | kLHintsExpandY, 10, 10, 10, 1));
+  frame_container->AddFrame(m_ecanvas, new TGLayoutHints(
+                              kLHintsExpandX | kLHintsExpandY, 10, 10, 10, 1));
 
   m_ecanvas->GetCanvas()->
-      Connect("TCanvas", "ProcessedEvent(Int_t, Int_t, Int_t, TObject*)",
-          "EclFrame", this, "UpdateInfo(Int_t, Int_t, Int_t, TObject*)");
+  Connect("TCanvas", "ProcessedEvent(Int_t, Int_t, Int_t, TObject*)",
+          "Belle2::EclFrame", this, "updateInfo(Int_t, Int_t, Int_t, TObject*)");
 
-  SetGLViewMode(gl_view);
+  /* Adding frame container for settings and canvas to the main window */
+
+  AddFrame(frame_container, new TGLayoutHints(kLHintsExpandX | kLHintsExpandY,
+                                              1, 1, 1, 1));
+
+  B2DEBUG(100, "EclFrame:: GUI initialized.");
+
+  frame_container->SetMinWidth(w / 2);
+  // Add this if Root still throws BadDrawable errors.
+  // frame_container->SetMinHeight(h);
 
   SetWindowName("ECL Data");
   MapSubwindows();
-  Resize(GetDefaultSize());
+  Resize(w, h);
   MapWindow();
 
-  InitData();
+  B2DEBUG(100, "EclFrame:: Initializing data.");
+  initData();
+  B2DEBUG(100, "EclFrame:: Data initialized.");
 }
 
-void EclFrame::InitData() {
-  m_events_min->SetLimits(TGNumberFormat::kNELLimitMinMax,
-              0, m_ecl_data->GetLastEventId());
-  m_events_max->SetLimits(TGNumberFormat::kNELLimitMinMax,
-              0, m_ecl_data->GetLastEventId());
-
-  m_ev_slider->SetRange(0, m_ecl_data->GetLastEventId());
-//  ev_slider->SetPosition(0, TMath::Min(ecl_data->GetLastEventId(), 99));
-  m_ev_slider->SetPosition(TMath::Min(m_ecl_data->GetLastEventId(), 16),
-                           TMath::Min(m_ecl_data->GetLastEventId(), 16));
-  m_ev_slider->Connect("TGDoubleHSlider", "PositionChanged()",
-             "EclFrame", this, "UpdateEventRange()");
-  UpdateEventRange();
-}
-
-void EclFrame::MapSubwindows()
+void EclFrame::initData()
 {
-  TGMainFrame::MapSubwindows();
-  if (m_gl_view)
-    HideFrame(m_ecanvas);
-  switch(m_painter_type) {
-    case PAINTER_CHANNEL:
-    case PAINTER_SHAPER:
-    case PAINTER_COLLECTOR:
+  m_events_min->SetLimits(TGNumberFormat::kNELLimitMinMax,
+                          0, m_ecl_data->getLastEventId());
+  m_events_max->SetLimits(TGNumberFormat::kNELLimitMinMax,
+                          0, m_ecl_data->getLastEventId());
+
+  m_ev_slider->SetRange(0, m_ecl_data->getLastEventId());
+  m_ev_slider->SetPosition(0, 0);
+  m_ev_slider->Connect("TGDoubleHSlider", "PositionChanged()",
+                       "Belle2::EclFrame", this, "updateEventRange()");
+  updateEventRange();
+}
+
+void EclFrame::handleMenu(int id)
+{
+  static TString dir(".");
+  TGFileInfo fi;
+  switch (id) {
+    case M_FILE_SAVE:
+      fi.fFileTypes = filetypes;
+      fi.fIniDir    = StrDup(dir);
+      new TGFileDialog(gClient->GetRoot(), this, kFDSave, &fi);
+      printf("Save file: %s (dir: %s)\n", fi.fFilename, fi.fIniDir);
+      m_ecanvas->GetCanvas()->SaveAs(fi.fFilename);
+      break;
+    case M_FILE_EXIT:
+      CloseWindow();
+      break;
+    case M_VIEW_ENERGY:
+      SetMode(1);
+      changeType((EclPainterType)m_painter_type);
+      break;
+    case M_VIEW_EVENTS:
+      SetMode(0);
+      changeType((EclPainterType)m_painter_type);
+      break;
+    case M_VIEW_DET_FULL:
+      m_subsys = EclData::ALL;
+      m_ecl_painter->setDisplayedSubsystem(m_subsys);
+      doDraw();
+      break;
+    case M_VIEW_DET_BARR:
+      m_subsys = EclData::BARR;
+      m_ecl_painter->setDisplayedSubsystem(m_subsys);
+      doDraw();
+      break;
+    case M_VIEW_DET_FORW:
+      m_subsys = EclData::FORW;
+      m_ecl_painter->setDisplayedSubsystem(m_subsys);
+      doDraw();
+      break;
+    case M_VIEW_DET_BACK:
+      m_subsys = EclData::BACKW;
+      m_ecl_painter->setDisplayedSubsystem(m_subsys);
+      doDraw();
       break;
     default:
-      m_settings->HideFrame(m_frame3);
       break;
   }
 }
 
-void EclFrame::SetGLViewMode(bool mode, bool request_update)
+void EclFrame::loadNewData()
 {
-  if (!request_update && mode == m_gl_view)
-    return;
-  if (mode) {
-    m_gl_view = true;
+  m_ev_slider->SetRange(0, m_ecl_data->getLastEventId());
+  m_events_min->SetLimits(TGNumberFormat::kNELLimitMinMax,
+                          0, m_ecl_data->getLastEventId());
+  m_events_max->SetLimits(TGNumberFormat::kNELLimitMinMax,
+                          0, m_ecl_data->getLastEventId());
 
-    m_glviewer = new TGLSAViewer(this, gPad);
-    m_glviewer->SetResetCamerasOnUpdate(kFALSE);
-    AddFrame(m_glviewer->GetFrame(), new TGLayoutHints(
-               kLHintsExpandX | kLHintsExpandY, 10, 10, 10, 1));
-    gPad->SetViewer3D(m_glviewer);
-    m_glviewer->
-        Connect("TGLSAViewer", "MouseOver(TObject*, UInt_t)",
-            "EclFrame", this, "UpdateInfo3D(TObject*, UInt_t)");
+  if (m_last_event < m_ecl_data->getLastEventId() &&
+      (m_auto_display || m_last_event == -1)) {
+    m_last_event++;
+    if (m_last_event <= 1) {
+      // Draw the first loaded event and update GUI.
+      doDraw();
+      m_settings->MapSubwindows();
+      MapSubwindows();
 
-    MapSubwindows();
-  }
-  else {
-    m_gl_view = false;
+//      Layout();
+//      MapSubwindows();
+//      Layout();
 
-    MapSubwindows();
-
-    RemoveFrame(m_glviewer->GetFrame());
-    m_glviewer->GetFrame()->ReparentWindow(gClient->GetRoot());
-    delete m_glviewer;
+      m_ev_slider->SetPosition(0, 0);
+    }
+    updateEventRange();
+//    gSystem->ProcessEvents();
   }
 }
 
-void EclFrame::UpdateEventRange() {
+void EclFrame::updateCanvas()
+{
+  TCanvas* fCanvas = m_ecanvas->GetCanvas();
+
+  fCanvas->SetLogz();
+  fCanvas->cd();
+  m_ecl_painter->Draw();
+  updateInfo(51, 0, 0, 0);
+  fCanvas->Update();
+}
+
+void EclFrame::updateEventRange()
+{
   Float_t ev_min, ev_max;
   m_ev_slider->GetPosition(&ev_min, &ev_max);
 
   m_events_min->SetNumber(ev_min);
   m_events_max->SetNumber(ev_max);
+
+//  m_settings->MapSubwindows();
+//  m_ev_slider->Layout();
+  m_ev_slider->MapWindow();
+  m_ev_slider->MapSubwindows(); // Doesn't work without MapWindow
 }
 
-void EclFrame::ShowPrevEvents()
+void EclFrame::showPrevEvents()
 {
   Float_t ev_min, ev_max, diff;
 
@@ -261,69 +397,69 @@ void EclFrame::ShowPrevEvents()
     ev_max = 0;
 
   m_ev_slider->SetPosition(ev_min, ev_max);
-  UpdateEventRange();
-  DoDraw();
+  updateEventRange();
+  doDraw();
 }
 
-void EclFrame::ShowNextEvents() {
+void EclFrame::showNextEvents()
+{
   Float_t ev_min, ev_max, diff;
 
   ev_min = m_events_min->GetNumber();
   ev_max = m_events_max->GetNumber();
 
-  if (ev_max >= m_ecl_data->GetLastEventId())
+  if (ev_max >= m_ecl_data->getLastEventId())
     return;
 
   diff = ev_max - ev_min + 1;
   ev_min += diff;
   ev_max += diff;
-  if (ev_max > m_ecl_data->GetLastEventId())
-    ev_max = m_ecl_data->GetLastEventId();
+  if (ev_max > m_ecl_data->getLastEventId())
+    ev_max = m_ecl_data->getLastEventId();
 
   m_ev_slider->SetPosition(ev_min, ev_max);
-  UpdateEventRange();
-  DoDraw();
+  updateEventRange();
+  doDraw();
 }
 
-void EclFrame::ExcludeChannel() {
+void EclFrame::excludeChannel()
+{
   int ch = m_channel_id->GetNumber();
-  m_ecl_data->ExcludeChannel(ch, true);
-  DoDraw();
+  m_ecl_data->excludeChannel(ch, true);
+  doDraw();
 }
 
-void EclFrame::DoDraw() {
-  m_ecl_data->SetEventRange(m_events_min->GetIntNumber(),
-              m_events_max->GetIntNumber());
+void EclFrame::doDraw()
+{
+  m_ecl_data->setEventRange(m_events_min->GetIntNumber(),
+                            m_events_max->GetIntNumber());
 
   float en_min = m_min_en_threshold->GetNumber();
   float en_max = m_max_en_threshold->GetNumber();
   if (m_threshold_switch->GetState() == kButtonDown)
-    m_ecl_data->SetEnergyThreshold(en_min, en_max);
+    m_ecl_data->setEnergyThreshold(en_min, en_max);
   else
-    m_ecl_data->SetEnergyThreshold(0, -1);
+    m_ecl_data->setEnergyThreshold(0, -1);
 
-  TCanvas *fCanvas = m_ecanvas->GetCanvas();
-  fCanvas->SetLogz();
-  fCanvas->cd();
-  m_ecl_painter->Draw();
-  UpdateInfo(51, 0, 0, 0);
-  fCanvas->Update();
+  updateCanvas();
 }
 
-void EclFrame::UpdateInfo(int event, int px, int py, TObject*)
+void EclFrame::doDrawAll()
 {
-  // On mouse click
-  if (event == 1) {
+  m_ecl_data->setEventRange(0, m_ecl_data->getLastEventId());
 
-  }
-  // On mouse release
+  updateCanvas();
+}
+
+void EclFrame::updateInfo(int event, int px, int py, TObject*)
+{
   if (event == 11) {
-    EclPainter* new_painter = m_ecl_painter->HandleClick(px, py);
+    EclPainter* new_painter = m_ecl_painter->handleClick(px, py);
 
     if (new_painter != NULL) {
       delete m_ecl_painter;
       m_ecl_painter = new_painter;
-      DoDraw();
+      doDraw();
 
       Layout();
       MapSubwindows();
@@ -331,72 +467,65 @@ void EclFrame::UpdateInfo(int event, int px, int py, TObject*)
   }
   // On mouse move
   if (event == 51) {
-    m_ecl_painter->GetInformation(px, py, m_frame1);
+    m_ecl_painter->getInformation(px, py, m_frame1);
 
-    Layout();
-    MapSubwindows();
+    m_frame1->Layout();
   }
 }
 
-void EclFrame::UpdateInfo3D(TObject* obj, UInt_t state)
+void EclFrame::changeRange(TGListTreeItem* entry, int)
 {
-  if (obj) {
-    TGeoVolume* seg = (TGeoVolume*)obj;
-    UpdateInfo(51, seg->GetNumber(), 0, 0);
-  }
-}
-
-void EclFrame::ChangeRange(TGListTreeItem *entry, int)
-{
-  SetGLViewMode(false);
-
-  m_frame1->SetLineCount(0);
+  m_frame1->setLineCount(0);
   Layout();
   MapSubwindows();
 
   TGListTreeItem* parent = entry->GetParent();
   if (!parent) {
     // Root entry (detector) has been selected.
-    ChangeType(PAINTER_COLLECTOR);
-  }
-  else {
+    changeType(PAINTER_COLLECTOR);
+  } else {
     TGListTreeItem* grandparent = parent->GetParent();
     if (!grandparent) {
       // Crate entry had been selected.
-      ChangeType(PAINTER_SHAPER, false);
-      int crate = (int)entry->GetUserData();
-      m_ecl_painter->SetXRange(crate*12, crate*12 + 11);
-      DoDraw();
-    }
-    else {
+      changeType(PAINTER_SHAPER, false);
+      long crate = (long)entry->GetUserData();
+      m_ecl_painter->setXRange(crate * 12, crate * 12 + 11);
+      //((EclPainter1D*)m_ecl_painter)->setCrate(crate + 1);
+      doDraw();
+    } else {
       // Shaper entry had been selected.
-      ChangeType(PAINTER_CHANNEL, false);
-      int shaper = (int)entry->GetUserData();
-      int crate  = (int)parent->GetUserData();
-      shaper = 12*crate + shaper;
-      m_ecl_painter->SetXRange(shaper*16, shaper*16 + 15);
-      DoDraw();
+      changeType(PAINTER_CHANNEL, false);
+      long shaper = (long)entry->GetUserData();
+      long crate  = (long)parent->GetUserData();
+      shaper = 12 * crate + shaper;
+      //m_ecl_painter->setXRange(shaper * 16, shaper * 16 + 15);
+      ((EclPainter1D*)m_ecl_painter)->setShaper(crate + 1, shaper + 1);
+      doDraw();
     }
   }
 }
 
-void EclFrame::ChangeType(int type, bool redraw)
+void EclFrame::changeType(int type, bool redraw)
 {
   EclPainter* new_painter =
-      EclPainterFactory::CreatePainter((EclPainterType)type, m_ecl_data);
+    EclPainterFactory::createPainter((EclPainterType)type, m_ecl_data,
+                                     m_mapper, m_subsys);
 
   if (new_painter) {
     m_painter_type = (EclPainterType)type;
-    SetGLViewMode(m_painter_type == PAINTER_3D);
 
     delete m_ecl_painter;
     m_ecl_painter = new_painter;
-    m_frame1->SetLineCount(0);
+    m_frame1->setLineCount(0);
     m_ecanvas->GetCanvas()->Clear();
 
+    updateInfo(51, 0, 0, 0);
+
+    Layout();
     MapSubwindows();
+    Layout();
 
     if (redraw)
-      DoDraw();
+      doDraw();
   }
 }

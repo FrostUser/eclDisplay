@@ -26,6 +26,6 @@ EclFrameDict.o:
 	$(CC) $(CFLAGS) $< -o $@
 
 clean:
-	rm -rf sources/*.o $(EXECUTABLE)
+	rm -rf sources/*.o sources/dummyClasses/*.o $(EXECUTABLE)
 	rm -rf sources/EclFrameDict.cc
 

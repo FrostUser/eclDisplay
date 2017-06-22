@@ -1,0 +1,5 @@
+sources/EclFrameDict.*
+*.o
+*.swp
+ecldisplay.out
+import_project.sh

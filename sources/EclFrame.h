@@ -118,7 +118,9 @@ namespace Belle2 {
 
     /**  Enum for menu commands. */
     enum EclFrameCommandIdentifiers {
+      M_FILE_OPEN,
       M_FILE_SAVE,
+      M_FILE_EXPORT_TREE, /**< Export EclDisplay data into simple TTree*/
       M_FILE_EXIT,
 
       M_VIEW_EVENTS, /**< Display histograms for events. */

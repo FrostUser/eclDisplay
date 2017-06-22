@@ -5,8 +5,8 @@ LDFLAGS =
 CFLAGS  += `root-config --cflags --glibs` -lRGL -lGeom
 LDFLAGS += `root-config --cflags --glibs` -lRGL -lGeom
 
-SOURCES  = $(wildcard *.cc)
-SOURCES += $(wildcard dummyClasses/*.cc)
+SOURCES  = $(wildcard sources/*.cc)
+SOURCES += $(wildcard sources/dummyClasses/*.cc)
 
 OBJECTS  = $(SOURCES:.cc=.o)
 # OBJECTS += EclFrameDict.o
@@ -19,13 +19,13 @@ $(EXECUTABLE): $(OBJECTS)
 	$(CC) $(OBJECTS) -o $@ $(LDFLAGS)
 
 EclFrameDict.o:
-	rootcint -f EclFrameDict.cc -c EclFrame.h linkdef.h
-	$(CC) $(CFLAGS) EclFrameDict.cc -o $@
+	rootcint -f sources/EclFrameDict.cc -c sources/EclFrame.h sources/linkdef.h
+	$(CC) $(CFLAGS) sources/EclFrameDict.cc -o $@
 
 .cc.o:
 	$(CC) $(CFLAGS) $< -o $@
 
 clean:
-	rm -rf *.o $(EXECUTABLE)
-	rm -rf EclFrameDict.cc
+	rm -rf sources/*.o $(EXECUTABLE)
+	rm -rf sources/EclFrameDict.cc
 

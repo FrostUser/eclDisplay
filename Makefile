@@ -9,7 +9,8 @@ LDFLAGS += `root-config --cflags --glibs` -lRGL -lGeom
 
 #   FILES   #
 
-SOURCES  = $(wildcard sources/*.cc)
+# filter-out is used to prevent double occurence of EclFrameDict.cc in SOURCES
+SOURCES  = $(filter-out sources/EclFrameDict.cc, $(wildcard sources/*.cc))
 SOURCES += sources/EclFrameDict.cc
 SOURCES += $(wildcard sources/dummyClasses/*.cc)
 
@@ -30,6 +31,7 @@ pre-build:
 	@echo $(SOURCES)
 	@echo $(OBJECTS)
 	@echo Pre-build: generating ROOT dictionary for EclFrame class
+	rm -rf sources/EclFrameDict.*
 	cd sources; rootcint -f EclFrameDict.cc -c EclFrame.h linkdef.h
 
 main-build: $(SOURCES) $(EXECUTABLE)

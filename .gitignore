@@ -7,3 +7,4 @@ import_project.sh
 export_to_basf2.sh
 
 eclDisplay/*
+QTProject/*

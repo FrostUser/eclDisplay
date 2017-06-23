@@ -1,0 +1,7 @@
+Import('env')
+
+env['LIBS'] = ['Core', '$ROOT_LIBS', 'Gui', 'ecl_dataobjects', 'rawdata_dataobjects',
+               'mdst_dataobjects', 'simulation_dataobjects', 'ecl',
+               'framework']
+
+Return('env')

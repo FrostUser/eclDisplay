@@ -1,5 +1,9 @@
 sources/EclFrameDict.*
 *.o
 *.swp
+
 ecldisplay.out
 import_project.sh
+export_to_basf2.sh
+
+eclDisplay/*

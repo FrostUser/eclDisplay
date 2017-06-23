@@ -123,6 +123,12 @@ namespace Belle2 {
      */
     static int getCrystalCount();
 
+    // TODO: Using approximate coefficients.
+    /**
+     * Convert energy from ADC counts to MeV.
+     */
+    double ampToEnergy(int amp);
+
     /**
      * Returns data contained in EclDisplay.
      */

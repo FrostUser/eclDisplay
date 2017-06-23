@@ -56,8 +56,6 @@ EclFrame::EclFrame(int painter_type, EclData* data, bool auto_display, ECLChanne
 
   m_auto_display = auto_display;
 
-  Connect("CloseWindow()", "Belle2::EclFrame", this, "setClosed()");
-
   gStyle->SetOptStat(0);
 
   doDraw();

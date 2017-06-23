@@ -124,6 +124,15 @@ int EclData::getCrystalCount()
   return 8736;
 }
 
+double EclData::ampToEnergy(int amp)
+{
+  // This is the default conversion constant that should be changed to
+  // database value.
+  const double adc_to_mev = 0.05;
+
+  return amp * adc_to_mev;
+}
+
 TTree* EclData::getTree()
 {
   return m_tree;
@@ -372,7 +381,7 @@ void EclData::update(bool reset_event_ranges)
         if (time < m_time_range_min || time > m_time_range_max)
           continue;
 
-      float energy = (float)amp / 20;
+      double energy = ampToEnergy(amp);
 
       if (m_en_range_max >= 0)
         if (energy < m_en_range_min || energy > m_en_range_max)
@@ -505,6 +514,13 @@ void EclData::fillTimeHistogram(TH1F* hist, int time_min, int time_max, EclData:
 
   for (int i = start; i < end; i++) {
     m_tree->GetEntry(i);
+
+    double energy = ampToEnergy(amp);
+
+    if (m_en_range_max >= 0)
+      if (energy < m_en_range_min || energy > m_en_range_max)
+        continue;
+
     if (isCrystalInSubsystem(ch, subsys)) {
       if (time >= time_min && time <= time_max)
         hist->Fill(time);

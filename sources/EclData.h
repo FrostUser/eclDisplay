@@ -123,7 +123,7 @@ namespace Belle2 {
      */
     static int getCrystalCount();
 
-    // TODO: Using approximate coefficients.
+    // TODO: Stop using approximate coefficients, load from database.
     /**
      * Convert energy from ADC counts to MeV.
      */

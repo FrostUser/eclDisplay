@@ -1,6 +1,7 @@
 sources/EclFrameDict.*
 *.o
 *.swp
+*.pcm
 
 ecldisplay.out
 import_project.sh

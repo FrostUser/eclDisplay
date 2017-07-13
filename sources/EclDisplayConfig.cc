@@ -57,16 +57,37 @@ void EclDisplayConfig::parseLine(std::string line)
   values[key] = value;
 }
 
+namespace Belle2
+{
+  template<>
+  bool EclDisplayConfig::get<bool>(const std::string &name)
+  {
+    return values[name] == "true";
+  }
+
+  template<>
+  std::string EclDisplayConfig::get<std::string>(const std::string &name)
+  {
+    return values[name];
+  }
+}
+
+bool EclDisplayConfig::getBool(const std::string &name)
+{
+  return get<bool>(name);
+}
+
 int EclDisplayConfig::getInt(const std::string &name)
 {
   return get<int>(name);
 }
 
-template <typename T>
-T EclDisplayConfig::get(const std::string &name)
+double EclDisplayConfig::getDouble(const std::string &name)
 {
-  std::istringstream convert(values[name]);
-  T ret;
-  convert >> ret;
-  return ret;
+  return get<double>(name);
+}
+
+std::string EclDisplayConfig::getString(const std::string &name)
+{
+  return get<std::string>(name);
 }

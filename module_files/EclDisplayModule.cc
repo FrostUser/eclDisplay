@@ -47,7 +47,7 @@ EclDisplayModule::~EclDisplayModule()
 
 void EclDisplayModule::initialize()
 {
-  StoreArray<ECLDigit>::required();
+  eclarray.isRequired();
 
   // Loading code from ECLUnpacker
   std::string ini_file_name = FileSystem::findFile(m_eclMapperInitFileName);
@@ -87,9 +87,6 @@ void EclDisplayModule::beginRun()
 
 void EclDisplayModule::event()
 {
-  StoreArray<ECLDigit> eclarray;
-//  B2DEBUG(150, "eclarray.getEntries() == " << eclarray.getEntries());
-
   // EclFrame is closed, skipping data reading.
   if (m_frame_closed) return;
 

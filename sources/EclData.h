@@ -113,6 +113,11 @@ namespace Belle2 {
 
   private:
     /**
+     * Clone attributes from other EclData.
+     */
+    void cloneFrom(const EclData& other);
+
+    /**
      * Initialization of arrays.
      */
     void initVariables();

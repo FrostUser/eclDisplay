@@ -45,46 +45,16 @@ EclData::EclData(const EclData& data)
   initVariables();
   initEventRanges();
 
-  m_tree = data.m_tree->CloneTree();
-
-  m_tree = new TTree("tree", "tree");
-  m_tree->Branch("ch", &ch, "ch/I");
-  m_tree->Branch("amp", &amp, "amp/I");
-  m_tree->Branch("time", &time, "time/I");
-  m_tree->Branch("evtn", &evtn, "evtn/I");
-
-  m_last_event_id = data.m_last_event_id;
-  m_time_max = data.m_time_max;
-  // m_excluded_ch is not copied.
-  m_excluded_ch.clear();
-
-  m_event_count_max = data.m_event_count_max;
-  m_energy_total = data.m_energy_total;
-
-  for (int i = 0; i < getCrystalCount() + 1; i++) {
-    m_event_counts[i] = data.m_event_counts[i];
-    m_energy_sums[i] = data.m_energy_sums[i];
-  }
-
-  // TODO: Vectors surely can be copied in more simple way.
-  for (unsigned int i = 0; i < data.m_event_entry.size(); i++) {
-    m_event_entry.push_back(data.m_event_entry[i]);
-  }
-
-  m_en_range_min = data.m_en_range_min;
-  m_en_range_max = data.m_en_range_max;
-
-  m_time_range_min = data.m_time_range_min;
-  m_time_range_max = data.m_time_range_max;
-
-  m_ev_range_min = data.m_ev_range_min;
-  m_ev_range_max = data.m_ev_range_max;
+  cloneFrom(data);
 }
 
-EclData &EclData::operator=(const EclData &other)
+EclData &EclData::operator=(const EclData& other)
 {
   if (this != &other) { // self-assignment check
-    return EclData(other);
+    initVariables();
+    initEventRanges();
+
+    cloneFrom(other);
   }
   return *this;
 }
@@ -94,6 +64,44 @@ EclData::~EclData()
   delete m_event_counts;
   delete m_energy_sums;
   delete m_tree;
+}
+
+void EclData::cloneFrom(const EclData &other)
+{
+  m_tree = other.m_tree->CloneTree();
+
+  m_tree = new TTree("tree", "tree");
+  m_tree->Branch("ch", &ch, "ch/I");
+  m_tree->Branch("amp", &amp, "amp/I");
+  m_tree->Branch("time", &time, "time/I");
+  m_tree->Branch("evtn", &evtn, "evtn/I");
+
+  m_last_event_id = other.m_last_event_id;
+  m_time_max = other.m_time_max;
+  // m_excluded_ch is not copied.
+  m_excluded_ch.clear();
+
+  m_event_count_max = other.m_event_count_max;
+  m_energy_total = other.m_energy_total;
+
+  for (int i = 0; i < getCrystalCount() + 1; i++) {
+    m_event_counts[i] = other.m_event_counts[i];
+    m_energy_sums[i] = other.m_energy_sums[i];
+  }
+
+  // TODO: Vectors surely can be copied in more simple way.
+  for (unsigned int i = 0; i < other.m_event_entry.size(); i++) {
+    m_event_entry.push_back(other.m_event_entry[i]);
+  }
+
+  m_en_range_min = other.m_en_range_min;
+  m_en_range_max = other.m_en_range_max;
+
+  m_time_range_min = other.m_time_range_min;
+  m_time_range_max = other.m_time_range_max;
+
+  m_ev_range_min = other.m_ev_range_min;
+  m_ev_range_max = other.m_ev_range_max;
 }
 
 void EclData::initVariables()
@@ -266,36 +274,36 @@ int EclData::getChannel(int phi_id, int theta_id)
   return ring_start_id[theta_id] + phi_id;
 }
 
-int EclData::getPhiId(int ch)
+int EclData::getPhiId(int _ch)
 {
   for (int i = 0; i < 69; i++) {
-    if (ch < ring_start_id[i + 1])
-      return ch - ring_start_id[i];
+    if (_ch < ring_start_id[i + 1])
+      return _ch - ring_start_id[i];
   }
 
   return -1;
 }
 
-int EclData::getThetaId(int ch)
+int EclData::getThetaId(int _ch)
 {
   for (int i = 0; i < 69; i++) {
-    if (ch < ring_start_id[i + 1])
+    if (_ch < ring_start_id[i + 1])
       return i;
   }
 
   return -1;
 }
 
-void EclData::excludeChannel(int ch, bool do_update)
+void EclData::excludeChannel(int _ch, bool do_update)
 {
-  m_excluded_ch.insert(ch);
+  m_excluded_ch.insert(_ch);
   if (do_update)
     update();
 }
 
-void EclData::includeChannel(int ch, bool do_update)
+void EclData::includeChannel(int _ch, bool do_update)
 {
-  m_excluded_ch.erase(ch);
+  m_excluded_ch.erase(_ch);
   if (do_update)
     update();
 }
@@ -416,7 +424,7 @@ void EclData::update(bool reset_event_ranges)
 }
 
 //void EclData::addEvent(int ch, int amp, int time, int evtn)
-int EclData::addEvent(ECLDigit* event, int evtn)
+int EclData::addEvent(ECLDigit* event, int _evtn)
 {
   if (event->getAmp() <= 0 || event->getCellId() <= 0) {
     return -1;
@@ -425,15 +433,15 @@ int EclData::addEvent(ECLDigit* event, int evtn)
   this->ch = event->getCellId();
   this->amp = event->getAmp();
   this->time = event->getTimeFit();
-  this->evtn = evtn;
+  this->evtn = _evtn;
 
   if (m_time_max < time) m_time_max = time;
-  if (m_last_event_id < evtn) {
-    m_last_event_id = evtn;
+  if (m_last_event_id < _evtn) {
+    m_last_event_id = _evtn;
     m_event_entry.push_back(m_tree->GetEntries());
   }
 
-  B2DEBUG(200, "Added event #" << evtn << ", ch:" << ch
+  B2DEBUG(200, "Added event #" << _evtn << ", ch:" << ch
           << ", amp:" << amp << ", time:" << time);
 
   m_tree->Fill();

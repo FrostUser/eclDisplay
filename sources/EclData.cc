@@ -81,6 +81,14 @@ EclData::EclData(const EclData& data)
   m_ev_range_max = data.m_ev_range_max;
 }
 
+EclData &EclData::operator=(const EclData &other)
+{
+  if (this != &other) { // self-assignment check
+    return EclData(other);
+  }
+  return *this;
+}
+
 EclData::~EclData()
 {
   delete m_event_counts;

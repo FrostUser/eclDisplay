@@ -103,6 +103,10 @@ namespace Belle2 {
      * Copy constructor. Resets m_excluded_ch upon copy.
      */
     EclData(const EclData& data);
+    /**
+     * Assignment operator: utilizes copy constructor.
+     */
+    EclData& operator=(const EclData& other);
 
 
     ~EclData();

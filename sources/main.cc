@@ -30,7 +30,7 @@ int main(int argc, char** argv)
   EclData* m_data;
   EclFrame* m_frame;
 
-  int m_displayMode = 7;
+  int m_displayMode = 9;
   int m_autoDisplay = 1;
   
   m_app   = new TApplication("ECLDisplay App", 0, 0);

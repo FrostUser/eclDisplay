@@ -32,7 +32,7 @@ EclDisplayModule::EclDisplayModule() : Module()
   addParam("displayEnergy", m_displayEnergy,
            "If true, energy distribution per channel (shaper, crate) is displayed. Otherwise, number of counts is displayed", false);
   addParam("displayMode", m_displayMode,
-           "Default display mode. Can be later changed in GUI.", 7);
+           "Default display mode. Can be later changed in GUI.", 9);
   addParam("autoDisplay", m_autoDisplay,
            "If true, events are displayed as soon as they are loaded.", true);
   addParam("InitFileName", m_eclMapperInitFileName,

@@ -13,20 +13,20 @@
 using namespace Belle2;
 
 const int EclData::ring_start_id[70] = {
-    // forward (0-12)
-    1,    49,   97,   161,  225,  289,  385,  481,  577,  673,
-    769,  865,  1009,
-    // barrel (13-58)
-    1153, 1297, 1441, 1585, 1729, 1873, 2017, 2161, 2305, 2449,
-    2593, 2737, 2881, 3025, 3169, 3313, 3457, 3601, 3745, 3889,
-    4033, 4177, 4321, 4465, 4609, 4753, 4897, 5041, 5185, 5329,
-    5473, 5617, 5761, 5905, 6049, 6193, 6337, 6481, 6625, 6769,
-    6913, 7057, 7201, 7345, 7489, 7633,
-    // forward (59-68)
-    7777, 7921, 8065, 8161, 8257, 8353, 8449, 8545, 8609, 8673,
-    // last_crystal+1
-    EclData::getCrystalCount() + 1
-  };
+  // forward (0-12)
+  1,    49,   97,   161,  225,  289,  385,  481,  577,  673,
+  769,  865,  1009,
+  // barrel (13-58)
+  1153, 1297, 1441, 1585, 1729, 1873, 2017, 2161, 2305, 2449,
+  2593, 2737, 2881, 3025, 3169, 3313, 3457, 3601, 3745, 3889,
+  4033, 4177, 4321, 4465, 4609, 4753, 4897, 5041, 5185, 5329,
+  5473, 5617, 5761, 5905, 6049, 6193, 6337, 6481, 6625, 6769,
+  6913, 7057, 7201, 7345, 7489, 7633,
+  // forward (59-68)
+  7777, 7921, 8065, 8161, 8257, 8353, 8449, 8545, 8609, 8673,
+  // last_crystal+1
+  EclData::getCrystalCount() + 1
+};
 
 EclData::EclData()
 {
@@ -48,7 +48,7 @@ EclData::EclData(const EclData& data)
   cloneFrom(data);
 }
 
-EclData &EclData::operator=(const EclData& other)
+EclData& EclData::operator=(const EclData& other)
 {
   if (this != &other) { // self-assignment check
     initVariables();
@@ -66,7 +66,7 @@ EclData::~EclData()
   delete m_tree;
 }
 
-void EclData::cloneFrom(const EclData &other)
+void EclData::cloneFrom(const EclData& other)
 {
   m_tree = other.m_tree->CloneTree();
 
@@ -140,13 +140,13 @@ int EclData::getCrystalCount()
   return 8736;
 }
 
-double EclData::ampToEnergy(int amp)
+double EclData::ampToEnergy(int _amp)
 {
   // This is the default conversion constant that should be changed to
   // database value.
   const double adc_to_mev = 0.05;
 
-  return amp * adc_to_mev;
+  return _amp * adc_to_mev;
 }
 
 TTree* EclData::getTree()
@@ -308,7 +308,7 @@ void EclData::includeChannel(int _ch, bool do_update)
     update();
 }
 
-void EclData::loadRootFile(const char *path)
+void EclData::loadRootFile(const char* path)
 {
   // TODO: Move this process to some new reset() method.
   m_excluded_ch.clear();

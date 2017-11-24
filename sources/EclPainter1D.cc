@@ -85,14 +85,20 @@ void EclPainter1D::setTitles()
 {
   // TODO: These extra labels might not be necessary.
   const char* name[3][5] = {
-    {"Events per channel", "Events per shaper", "Events per collector",
-     "Events per phi_id", "Events per theta_id"},
+    {
+      "Events per channel", "Events per shaper", "Events per collector",
+      "Events per phi_id", "Events per theta_id"
+    },
 
-    {"Energy per channel (MeV)", "Energy per shaper (MeV)", "Energy per collector (MeV)"
-    "Energy per phi_id (MeV)", "Energy per theta_id (MeV)"},
+    {
+      "Energy per channel (MeV)", "Energy per shaper (MeV)", "Energy per collector (MeV)"
+      "Energy per phi_id (MeV)", "Energy per theta_id (MeV)"
+    },
 
-    {"Time per channel (DAQ units)", "Time per shaper (DAQ units)", "Time per collector (DAQ units)",
-     "Time per phi_id (DAQ units)", "Time per theta_id (DAQ units)"}
+    {
+      "Time per channel (DAQ units)", "Time per shaper (DAQ units)", "Time per collector (DAQ units)",
+      "Time per phi_id (DAQ units)", "Time per theta_id (DAQ units)"
+    }
   };
   const char* xname[3] = {
     "Channel id", "Shaper id", "Collector id"

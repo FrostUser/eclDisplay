@@ -255,7 +255,7 @@ namespace Belle2 {
     /**
      * Load root file containing ECLDigit data from the specified path.
      */
-    void loadRootFile(const char *path);
+    void loadRootFile(const char* path);
 
     /**
      * Update time_min, time_max, event_counts and amp_sums.

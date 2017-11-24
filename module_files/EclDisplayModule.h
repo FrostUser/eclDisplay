@@ -14,7 +14,7 @@
 #include <rawdata/dataobjects/include/RawECL.h>
 #include <framework/core/include/Module.h>
 #include <framework/datastore/include/StoreArray.h>
-#include <ecl/utility/include/eclChannelMapper.h>
+#include <ecl/utility/include/ECLChannelMapper.h>
 #include <ecl/dataobjects/include/ECLDigit.h>
 
 #include <TSystem.h>

@@ -18,7 +18,7 @@
 #include <vector>
 #include <set>
 #include "dummyClasses/Logger.h"
-#include "dummyClasses/ECLDigit.h"
+#include "dummyClasses/ECLCalDigit.h"
 
 namespace Belle2 {
   /**
@@ -30,13 +30,13 @@ namespace Belle2 {
     /**  Tree with loaded events. */
     TTree* m_tree;
     /**  Tree channel field */
-    int ch;
-    /**  Tree amplitude field */
-    int amp;
-    /**  Tree time field */
-    int time;
-    /**  Tree event number field. */
-    int evtn;
+    int m_branch_ch;
+    /**  Tree energy branch */
+    double m_branch_energy;
+    /**  Tree time branch */
+    double m_branch_time;
+    /**  Tree event number branch. */
+    int m_branch_evtn;
 
     /**  Number of events for each crystal. */
     int* m_event_counts;
@@ -132,11 +132,11 @@ namespace Belle2 {
      */
     static int getCrystalCount();
 
-    // TODO: Stop using approximate coefficients, load from database.
-    /**
-     * Convert energy from ADC counts to MeV.
-     */
-    double ampToEnergy(int amp);
+    // // TODO: Stop using approximate coefficients, load from database.
+    // /**
+    //  * Convert energy from ADC counts to MeV.
+    //  */
+    // // double ampToEnergy(int m_tree_energy);
 
     /**
      * Returns data contained in EclDisplay.
@@ -253,12 +253,12 @@ namespace Belle2 {
     void includeChannel(int ch, bool do_update = false);
 
     /**
-     * Load root file containing ECLDigit data from the specified path.
+     * Load root file containing ECLCalDigit data from the specified path.
      */
     void loadRootFile(const char* path);
 
     /**
-     * Update time_min, time_max, event_counts and amp_sums.
+     * Update time_min, time_max, event_counts and energy_sums.
      */
     void update(bool reset_event_ranges = false);
 
@@ -270,17 +270,17 @@ namespace Belle2 {
      * @param evtn Number of event.
      * @return If ECLDigit contains incorrect data, negative values are returned. Otherwise, return value is 0.
      */
-    int addEvent(ECLDigit* event, int evtn);
+    int addEvent(ECLCalDigit *event, int evtn);
     /**
-     * Fill amplitude per channel histogram for the specified EclSubsystem
+     * Fill energy per channel histogram for the specified EclSubsystem
      * (Barrel, forward endcap, backward endcap, all of them).
      */
-    void fillAmpHistogram(TH1F* hist, int amp_min, int amp_max, EclSubsystem subsys);
+    void fillEnergyHistogram(TH1F* hist, int energy_min, int energy_max, EclSubsystem subsys);
     /**
-     * Fill amplitude per event histogram for the specified EclSubsystem
+     * Fill energy per event histogram for the specified EclSubsystem
      * (Barrel, forward endcap, backward endcap, all of them).
      */
-    void fillAmpSumHistogram(TH1F* hist, int amp_min, int amp_max, EclSubsystem subsys);
+    void fillEnergySumHistogram(TH1F* hist, int energy_min, int energy_max, EclSubsystem subsys);
     /**
      * Fill time histogram for the specified EclSubsystem
      * (Barrel, forward endcap, backward endcap, all of them).

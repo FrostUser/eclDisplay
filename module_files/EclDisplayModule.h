@@ -16,6 +16,7 @@
 #include <framework/datastore/include/StoreArray.h>
 #include <ecl/utility/include/ECLChannelMapper.h>
 #include <ecl/dataobjects/include/ECLDigit.h>
+#include <ecl/dataobjects/include/ECLCalDigit.h>
 
 #include <TSystem.h>
 #include <TApplication.h>
@@ -99,7 +100,7 @@ namespace Belle2 {
      *   large number of events. */
     EclData* m_data;
     /**  Displayed ECL events. */
-    StoreArray<ECLDigit> eclarray;
+    StoreArray<ECLCalDigit> eclarray;
     /**  Channel mapper to show channel <-> (crate, shaper) distributions. */
     ECLChannelMapper m_mapper;
 

@@ -17,6 +17,7 @@ rm eclDisplay/*/main.*
 sed -i \
     -e "s/\"dummyClasses\/Logger.h\"/<framework\/logging\/Logger.h>/" \
     -e "s/\"dummyClasses\/ECLDigit.h\"/<ecl\/dataobjects\/ECLDigit.h>/" \
+    -e "s/\"dummyClasses\/ECLCalDigit.h\"/<ecl\/dataobjects\/ECLCalDigit.h>/" \
     -e "s/\"dummyClasses\/eclChannelMapper.h\"/<ecl\/utility\/ECLChannelMapper.h>/" \
     eclDisplay/include/*.h eclDisplay/src/*.cc
 

@@ -42,9 +42,9 @@ namespace Belle2 {
     int* m_event_counts;
     /**  Max value in event_counts array. */
     int m_event_count_max;
-    /**  Sum of amplitudes of every event captured by crystal. */
+    /**  Sum of energies of every event captured by crystal (MeV). */
     float* m_energy_sums;
-    /**  Max value in amp_sums array. */
+    /**  Max value in m_energy_sums array. */
     float m_energy_sums_max;
     /**  Total energy for last displayed range of events. */
     float m_energy_total;
@@ -131,12 +131,6 @@ namespace Belle2 {
      * Get number of crystals in ECL.
      */
     static int getCrystalCount();
-
-    // // TODO: Stop using approximate coefficients, load from database.
-    // /**
-    //  * Convert energy from ADC counts to MeV.
-    //  */
-    // // double ampToEnergy(int m_tree_energy);
 
     /**
      * Returns data contained in EclDisplay.
@@ -262,15 +256,13 @@ namespace Belle2 {
      */
     void update(bool reset_event_ranges = false);
 
-    // Deprecated method.
-    //void addEvent(int ch, int amp, int time, int evtn);
     /**
      * Add ECLDigit event to inner TTree (m_tree).
      * @param event ECLDigit event
      * @param evtn Number of event.
      * @return If ECLDigit contains incorrect data, negative values are returned. Otherwise, return value is 0.
      */
-    int addEvent(ECLCalDigit *event, int evtn);
+    int addEvent(ECLCalDigit* event, int evtn);
     /**
      * Fill energy per channel histogram for the specified EclSubsystem
      * (Barrel, forward endcap, backward endcap, all of them).

@@ -15,7 +15,6 @@
 #include <framework/core/include/Module.h>
 #include <framework/datastore/include/StoreArray.h>
 #include <ecl/utility/include/ECLChannelMapper.h>
-#include <ecl/dataobjects/include/ECLDigit.h>
 #include <ecl/dataobjects/include/ECLCalDigit.h>
 
 #include <TSystem.h>

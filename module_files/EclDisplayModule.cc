@@ -94,7 +94,7 @@ void EclDisplayModule::event()
 
   for (int i = 0; i < eclarray.getEntries(); i++) {
     ECLCalDigit* record = eclarray[i];
-    if (record->getEnergy() >= 1.0) { //TODO: Move to constant ENERGY_THRESHOLD.
+    if (record->getEnergy() >= 1e-4) { //TODO: Move to constant ENERGY_THRESHOLD.
       if (m_data->addEvent(record, m_evtNum) == 0) {
         added_entries++;
       }

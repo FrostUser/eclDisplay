@@ -140,17 +140,6 @@ int EclData::getCrystalCount()
   return 8736;
 }
 
-// Obsolete: converting from ADC counts to MeV before the Database Age.
-//
-// double EclData::ampToEnergy(int _amp)
-// {
-//   // This is the default conversion constant that should be changed to
-//   // database value.
-//   const double adc_to_mev = 0.05;
-//
-//   return _amp * adc_to_mev;
-// }
-
 TTree* EclData::getTree()
 {
   return m_tree;
@@ -326,7 +315,7 @@ void EclData::loadRootFile(const char* path)
 
   tree->SetBranchAddress("ECLCalDigits.m_CellId", &m_branch_ch);
   tree->SetBranchAddress("ECLCalDigits.m_Energy", &m_branch_energy);
-  tree->SetBranchAddress("ECLCalDigits.m_Time", &m_branch_time);
+  tree->SetBranchAddress("ECLCalDigits.m_Time"  , &m_branch_time);
 
   TLeaf* leafCellId;
   TLeaf* leafEnergy;
@@ -351,10 +340,12 @@ void EclData::loadRootFile(const char* path)
 
     for (int j = 0; j < len; j++) {
       m_branch_ch     = leafCellId ->GetTypedValue<int>(j);
-      m_branch_energy = leafEnergy ->GetTypedValue<int>(j);
-      m_branch_time   = leafTimeFit->GetTypedValue<int>(j);
+      m_branch_energy = leafEnergy ->GetTypedValue<double>(j) * 1e3;
+      m_branch_time   = leafTimeFit->GetTypedValue<double>(j);
 
       if (m_time_max < m_branch_time) m_time_max = m_branch_time;
+
+      B2DEBUG(10, "Added event ECLCalDigits for crystal " << m_branch_ch);
 
       // TODO: Add energy cut.
       m_tree->Fill();
@@ -430,10 +421,10 @@ int EclData::addEvent(ECLCalDigit* event, int _evtn)
     return -1;
   }
 
-  this->m_branch_ch = event->getCellId();
-  this->m_branch_energy = event->getEnergy();
-  this->m_branch_time = event->getTime();
-  this->m_branch_evtn = _evtn;
+  m_branch_ch     = event->getCellId();
+  m_branch_energy = event->getEnergy() * 1e3; // To MeV
+  m_branch_time   = event->getTime();
+  m_branch_evtn   = _evtn;
 
   if (m_time_max < m_branch_time) m_time_max = m_branch_time;
   if (m_last_event_id < _evtn) {
@@ -531,10 +522,8 @@ void EclData::fillTimeHistogram(TH1F* hist, int time_min, int time_max, EclData:
   for (int i = start; i < end; i++) {
     m_tree->GetEntry(i);
 
-    double energy = m_branch_energy;
-
     if (m_en_range_max >= 0)
-      if (energy < m_en_range_min || energy > m_en_range_max)
+      if (m_branch_energy < m_en_range_min || m_branch_energy > m_en_range_max)
         continue;
 
     if (isCrystalInSubsystem(m_branch_ch, subsys)) {
